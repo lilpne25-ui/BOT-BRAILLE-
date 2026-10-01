@@ -4,7 +4,8 @@ import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   claimInboundEvent,
-  completeInboundEvent
+  completeInboundEvent,
+  hashProviderMessageId
 } from "@/modules/whatsapp/inbound-events";
 
 // Proves the PostgreSQL guarantees that a mock cannot. Skipped unless
@@ -100,7 +101,9 @@ describe.skipIf(!TEST_DATABASE_URL)("InboundEvent en PostgreSQL real", () => {
 
     expect(claimed).toHaveLength(1);
     expect(duplicates).toHaveLength(19);
-    expect(await processA.inboundEvent.count({ where: { providerMessageId: id } })).toBe(1);
+    expect(
+      await processA.inboundEvent.count({ where: { providerMessageIdHash: hashProviderMessageId(id) } })
+    ).toBe(1);
   }, 30_000);
 
   it("E: FAILED reentregado es duplicate con existingStatus FAILED; un id nuevo se reclama", async () => {

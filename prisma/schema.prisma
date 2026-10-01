@@ -349,24 +349,25 @@ model ConversationMessage {
 }
 
 // Idempotency ledger for inbound WhatsApp events. Stores metadata only:
-// no message text, payload, audio, phone or name. dedupeKey is NULL when the
-// provider did not supply a usable identity (event recorded, not deduplicated).
+// no message text, payload, audio, phone or name. The provider message id is
+// stored only as a hash (Meta wamids can encode the sender). dedupeKey is NULL
+// when the provider did not supply a usable identity (recorded, not deduplicated).
 // conversationId/sessionId are soft references (no FK) on purpose.
 model InboundEvent {
-  id                String             @id @default(cuid())
-  dedupeKey         String?            @unique
-  provider          String
-  channelId         String?
-  providerMessageId String?
-  messageType       String
-  status            InboundEventStatus @default(PROCESSING)
-  outcome           String?
-  errorCode         String?
-  transcribed       Boolean            @default(false)
-  conversationId    String?
-  sessionId         String?
-  receivedAt        DateTime           @default(now())
-  completedAt       DateTime?
+  id                    String             @id @default(cuid())
+  dedupeKey             String?            @unique
+  provider              String
+  channelId             String?
+  providerMessageIdHash String?
+  messageType           String
+  status                InboundEventStatus @default(PROCESSING)
+  outcome               String?
+  errorCode             String?
+  transcribed           Boolean            @default(false)
+  conversationId        String?
+  sessionId             String?
+  receivedAt            DateTime           @default(now())
+  completedAt           DateTime?
 
   @@index([status, receivedAt])
 }

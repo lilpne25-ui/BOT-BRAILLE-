@@ -4,6 +4,7 @@ import {
   buildInboundDedupeKey,
   claimInboundEvent,
   completeInboundEvent,
+  hashProviderMessageId,
   resolveInboundEventIdentity
 } from "@/modules/whatsapp/inbound-events";
 
@@ -153,9 +154,21 @@ describe("claimInboundEvent", () => {
 
     const data = inboundEvent.create.mock.calls[0][0].data;
     expect(Object.keys(data).sort()).toEqual(
-      ["channelId", "dedupeKey", "messageType", "provider", "providerMessageId"].sort()
+      ["channelId", "dedupeKey", "messageType", "provider", "providerMessageIdHash"].sort()
     );
     expect(JSON.stringify(data)).not.toContain("5215500000000");
+  });
+
+  it("A: guarda el id del proveedor solo como hash, nunca en claro", async () => {
+    const { store, inboundEvent } = createStore();
+    inboundEvent.create.mockResolvedValue({ id: "evt_1" });
+
+    await claimInboundEvent(metaEvent, store);
+
+    const data = inboundEvent.create.mock.calls[0][0].data;
+    expect(data.providerMessageIdHash).toBe(hashProviderMessageId("wamid.TEST_1"));
+    expect(data.providerMessageIdHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(JSON.stringify(data)).not.toContain("wamid.TEST_1");
   });
 
   it("B: misma identidad (P2002) -> duplicate con el estado existente", async () => {
@@ -215,7 +228,7 @@ describe("claimInboundEvent", () => {
 
     const data = inboundEvent.create.mock.calls[0][0].data;
     expect(data.dedupeKey).toBeNull();
-    expect(data.providerMessageId).toBeNull();
+    expect(data.providerMessageIdHash).toBeNull();
     expect(data.outcome).toBe("missing_provider_message_id");
   });
 

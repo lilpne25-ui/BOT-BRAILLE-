@@ -17,7 +17,7 @@ CREATE TABLE "InboundEvent" (
     "dedupeKey" TEXT,
     "provider" TEXT NOT NULL,
     "channelId" TEXT,
-    "providerMessageId" TEXT,
+    "providerMessageIdHash" TEXT,
     "messageType" TEXT NOT NULL,
     "status" "InboundEventStatus" NOT NULL DEFAULT 'PROCESSING',
     "outcome" TEXT,

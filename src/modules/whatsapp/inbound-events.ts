@@ -74,10 +74,26 @@ export type InboundEventCompletion = {
 type InboundEventStore = Pick<PrismaClient, "inboundEvent">;
 
 const DEDUPE_KEY_VERSION = "inbound-event:v1";
+const PROVIDER_MESSAGE_ID_HASH_VERSION = "inbound-event:provider-message-id:v1";
 
 function clean(value: string | null | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function sha256Hex(tuple: unknown[]) {
+  return createHash("sha256")
+    .update(JSON.stringify(tuple), "utf8")
+    .digest("hex");
+}
+
+/**
+ * The provider message id is stored only as this hash (a Meta wamid can encode the
+ * sender's number). To find an event while debugging, hash the known id and query
+ * InboundEvent.providerMessageIdHash.
+ */
+export function hashProviderMessageId(providerMessageId: string) {
+  return sha256Hex([PROVIDER_MESSAGE_ID_HASH_VERSION, providerMessageId.trim()]);
 }
 
 /**
@@ -93,17 +109,13 @@ export function buildInboundDedupeKey(parts: {
   providerMessageId: string;
   chatScope?: string | null;
 }) {
-  const tuple = [
+  return sha256Hex([
     DEDUPE_KEY_VERSION,
     parts.provider,
     parts.channelId,
     parts.providerMessageId,
     parts.chatScope ?? ""
-  ];
-
-  return createHash("sha256")
-    .update(JSON.stringify(tuple), "utf8")
-    .digest("hex");
+  ]);
 }
 
 export function resolveInboundEventIdentity(
@@ -167,7 +179,9 @@ export async function claimInboundEvent(
         dedupeKey: null,
         provider: input.provider,
         channelId: identity.channelId,
-        providerMessageId: identity.providerMessageId,
+        providerMessageIdHash: identity.providerMessageId
+          ? hashProviderMessageId(identity.providerMessageId)
+          : null,
         messageType,
         outcome: identity.reason
       },
@@ -183,7 +197,7 @@ export async function claimInboundEvent(
         dedupeKey: identity.dedupeKey,
         provider: input.provider,
         channelId: identity.channelId,
-        providerMessageId: identity.providerMessageId,
+        providerMessageIdHash: hashProviderMessageId(identity.providerMessageId),
         messageType
       },
       select: { id: true }
