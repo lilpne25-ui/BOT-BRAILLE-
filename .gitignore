@@ -9,6 +9,7 @@ coverage/
 .env
 .env.local
 .env.*.local
+.env.*
 !.env.example
 *.pem
 *.key
@@ -29,6 +30,8 @@ Backups/
 backups/
 BrowserProfiles/
 wa-auth/
+.wa-auth/
+.wa-logs/
 Screenshots/
 .tmp/
 tmp/
