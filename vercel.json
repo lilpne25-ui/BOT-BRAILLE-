@@ -1,0 +1,14 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "https://vlux.taile8f1bd.ts.net:8443/login",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "destination": "https://vlux.taile8f1bd.ts.net:8443/:path*",
+      "permanent": false
+    }
+  ]
+}

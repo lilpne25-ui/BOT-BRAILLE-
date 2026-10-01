@@ -1,0 +1,371 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  SALES
+  OPERATIONS
+}
+
+enum LeadStatus {
+  NEW
+  DIAGNOSIS
+  QUOTE_SENT
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum LeadSource {
+  WEB
+  WHATSAPP
+  REFERRAL
+  EMAIL
+  CALL
+}
+
+enum ActivityType {
+  LEAD_CREATED
+  QUOTE_CREATED
+  STATUS_CHANGED
+  PDF_GENERATED
+  CONVERSATION_CLOSED
+  CATALOG_UPDATED
+}
+
+enum ProjectStatus {
+  TECHNICAL_DIAGNOSIS
+  QUOTED
+  APPROVED
+  IN_PRODUCTION
+  SCHEDULED_INSTALLATION
+  IN_INSTALLATION
+  INSTALLED
+  CLOSED
+}
+
+enum ProjectRisk {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum WarrantyStatus {
+  ACTIVE
+  EXPIRING
+  REVIEW_REQUIRED
+  MAINTENANCE_SCHEDULED
+  ATTENDED
+}
+
+enum ConversationStatus {
+  IDLE
+  COLLECTING
+  COMPLETED
+  CLOSED
+}
+
+enum ConversationOperationalStatus {
+  CAPTURING_DATA
+  REQUIRES_SALES
+  PRELIM_QUOTE_CREATED
+  SEND_ERROR
+  ATTENDED_BY_SALES
+}
+
+enum ConversationRole {
+  ASSISTANT
+  USER
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+}
+
+enum PdfStatus {
+  PENDING
+  GENERATED
+  SENT
+  ARCHIVED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String
+  role         UserRole      @default(SALES)
+  passwordHash String?
+  permissions  Json?
+  isActive     Boolean       @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  leads        Lead[]
+  activities   ActivityLog[]
+
+  @@index([role, isActive])
+}
+
+model Lead {
+  id              String         @id @default(cuid())
+  code            String         @unique
+  companyName     String
+  city            String
+  projectType     String
+  status          LeadStatus     @default(NEW)
+  source          LeadSource
+  painPoint       String
+  estimatedValue  Float
+  nextAction      String
+  nextActionDate  DateTime
+  internalNotes   String
+  ownerId         String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  owner           User?          @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  contacts        Contact[]
+  quotes          Quote[]
+  projects        Project[]
+  warranties      Warranty[]
+  conversations   Conversation[]
+  activityLogs    ActivityLog[]
+}
+
+model Contact {
+  id         String   @id @default(cuid())
+  leadId     String
+  name       String
+  email      String
+  phone      String
+  position   String?
+  isPrimary  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+model Quote {
+  id             String       @id @default(cuid())
+  folio          String       @unique
+  year           Int
+  sequence       Int
+  version        Int          @default(1)
+  status         QuoteStatus  @default(DRAFT)
+  currency       String       @default("MXN")
+  subtotal       Float
+  installation   Float
+  tax            Float
+  total          Float
+  leadId         String
+  pdfVersion     Int?         @default(1)
+  pdfGeneratedAt DateTime?
+  pdfStatus      PdfStatus    @default(PENDING)
+  pdfMetadata    Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  lead           Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  items          QuoteItem[]
+  projects       Project[]
+  activityLogs   ActivityLog[]
+
+  @@unique([year, sequence])
+  @@index([leadId])
+}
+
+model QuoteItem {
+  id               String    @id @default(cuid())
+  quoteId          String
+  productId        String?
+  materialId       String?
+  productName      String
+  description      String
+  solutionType     String
+  unit             String
+  quantity         Float
+  unitPrice        Float
+  installationCost Float
+  notes            String?
+  createdAt        DateTime  @default(now())
+  quote            Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product          Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  material         Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+}
+
+model Product {
+  id           String      @id @default(cuid())
+  name         String      @unique
+  solutionType String
+  defaultUnit  String
+  basePrice    Float
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  quoteItems   QuoteItem[]
+  priceRules   PriceRule[]
+}
+
+model Material {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  multiplier Float
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  quoteItems QuoteItem[]
+  priceRules PriceRule[]
+}
+
+model PriceRule {
+  id                 String    @id @default(cuid())
+  name               String
+  productId          String?
+  materialId         String?
+  usageType          String?
+  urgencyLevel       String?
+  installationMethod String?
+  multiplier         Float
+  fixedDelta         Float?
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  product            Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  material           Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+}
+
+model Project {
+  id                    String        @id @default(cuid())
+  code                  String        @unique
+  leadId                String?
+  quoteId               String?
+  clientName            String
+  name                  String
+  solutionType          String
+  city                  String
+  status                ProjectStatus
+  responsible           String
+  estimatedInstallation DateTime
+  progress              Int
+  risk                  ProjectRisk
+  evidenceCount         Int
+  nextAction            String
+  mainItems             Json
+  timeline              Json
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  lead                  Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  quote                 Quote?        @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  warranties            Warranty[]
+  activityLogs          ActivityLog[]
+}
+
+model Warranty {
+  id                String         @id @default(cuid())
+  code              String         @unique
+  projectId         String?
+  leadId            String?
+  clientName        String
+  projectName       String
+  city              String
+  solutionInstalled String
+  installDate       DateTime
+  warrantyUntil     DateTime
+  nextMaintenance   DateTime
+  status            WarrantyStatus
+  evidence          String
+  evidenceCount     Int
+  responsible       String
+  warrantyType    String         @default("Estandar")
+  coverage        String         @default("Cobertura general conforme a condiciones comerciales.")
+  nextAction      String         @default("Dar seguimiento postventa.")
+  timeline          Json
+  observations      String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  project           Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  lead              Lead?          @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  activityLogs      ActivityLog[]
+}
+
+model Conversation {
+  id            String                @id @default(cuid())
+  source        String                @default("WHATSAPP")
+  customerName  String?
+  customerPhone String?
+  leadId        String?
+  status        ConversationStatus    @default(IDLE)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  lead          Lead?                 @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  sessions      ConversationSession[]
+  messages      ConversationMessage[]
+  activityLogs  ActivityLog[]
+}
+
+model ConversationSession {
+  id                String                        @id @default(cuid())
+  conversationId    String
+  status            ConversationStatus            @default(IDLE)
+  operationalStatus ConversationOperationalStatus @default(CAPTURING_DATA)
+  currentStepIndex  Int                           @default(0)
+  capturedData      Json?
+  intentDetected    Boolean                       @default(false)
+  folio             String?
+  estimatedAmount   Float?
+  lastError         String?
+  startedAt         DateTime                      @default(now())
+  updatedAt         DateTime                      @updatedAt
+  completedAt       DateTime?
+  conversation      Conversation                  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  messages          ConversationMessage[]
+  activityLogs      ActivityLog[]
+}
+
+model ConversationMessage {
+  id                    String              @id @default(cuid())
+  conversationId        String
+  conversationSessionId String
+  role                  ConversationRole
+  text                  String
+  stepId                String?
+  createdAt             DateTime            @default(now())
+  conversation          Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationSession   ConversationSession @relation(fields: [conversationSessionId], references: [id], onDelete: Cascade)
+}
+
+model ActivityLog {
+  id                    String               @id @default(cuid())
+  type                  ActivityType
+  message               String
+  metadata              Json?
+  userId                String?
+  leadId                String?
+  quoteId               String?
+  projectId             String?
+  warrantyId            String?
+  conversationId        String?
+  conversationSessionId String?
+  createdAt             DateTime             @default(now())
+  user                  User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  lead                  Lead?                @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  quote                 Quote?               @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  project               Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  warranty              Warranty?            @relation(fields: [warrantyId], references: [id], onDelete: SetNull)
+  conversation          Conversation?         @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  conversationSession   ConversationSession? @relation(fields: [conversationSessionId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@index([quoteId])
+  @@index([projectId])
+  @@index([warrantyId])
+  @@index([conversationId])
+  @@index([conversationSessionId])
+}

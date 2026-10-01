@@ -1,0 +1,19 @@
+{
+  "requestId": "sitejet-form-000123",
+  "nombre": "Carlos Lopez",
+  "empresa": "Hospital ABC",
+  "telefono": "+527221234567",
+  "correo": "carlos@hospitalabc.mx",
+  "ciudad": "Toluca, Estado de Mexico",
+  "productoServicio": "Señalización / Proyecto Retail",
+  "medidasAproximadas": "20 placas de 20 x 10 cm",
+  "materialAcabado": "Acero inoxidable",
+  "cantidad": 20,
+  "fechaRequerida": "2026-09-15",
+  "usoLugarColocacion": "Interior de hospital",
+  "logoAplicacion": "Aplicar logotipo institucional",
+  "referenciaDiseno": "Referencia proporcionada por el cliente",
+  "comentarios": "Requiere visita técnica",
+  "urlPaginaOrigen": "https://www.bidesign.mx/cotizacion",
+  "consentimientoPrivacidad": true
+}

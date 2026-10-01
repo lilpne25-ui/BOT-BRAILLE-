@@ -1,0 +1,43 @@
+# Dependencies / build
+node_modules/
+.next/
+out/
+dist/
+coverage/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Databases / runtime
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+prisma/*.db
+prisma/*.db-journal
+
+# Logs / backups / runtime
+logs/
+*.log
+Backups/
+backups/
+BrowserProfiles/
+wa-auth/
+Screenshots/
+.tmp/
+tmp/
+Temp/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+.vercel

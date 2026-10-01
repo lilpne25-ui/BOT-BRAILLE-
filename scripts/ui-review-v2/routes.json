@@ -1,0 +1,66 @@
+[
+  {
+    "order": 0,
+    "slug": "00-login",
+    "name": "Login",
+    "path": "/login",
+    "authenticated": false,
+    "waitMs": 2200
+  },
+  {
+    "order": 1,
+    "slug": "01-dashboard",
+    "name": "Dashboard",
+    "path": "/",
+    "authenticated": true,
+    "waitMs": 3200
+  },
+  {
+    "order": 2,
+    "slug": "02-prospectos",
+    "name": "Prospectos",
+    "path": "/prospectos",
+    "authenticated": true,
+    "waitMs": 3200
+  },
+  {
+    "order": 3,
+    "slug": "03-cotizador",
+    "name": "Cotizador",
+    "path": "/cotizador",
+    "authenticated": true,
+    "waitMs": 4200
+  },
+  {
+    "order": 4,
+    "slug": "04-catalogo",
+    "name": "Catalogo",
+    "path": "/catalogo",
+    "authenticated": true,
+    "waitMs": 3200
+  },
+  {
+    "order": 5,
+    "slug": "05-proyectos",
+    "name": "Proyectos",
+    "path": "/proyectos",
+    "authenticated": true,
+    "waitMs": 3200
+  },
+  {
+    "order": 6,
+    "slug": "06-whatsapp",
+    "name": "WhatsApp",
+    "path": "/whatsapp",
+    "authenticated": true,
+    "waitMs": 4200
+  },
+  {
+    "order": 7,
+    "slug": "07-usuarios",
+    "name": "Usuarios",
+    "path": "/usuarios",
+    "authenticated": true,
+    "waitMs": 3200
+  }
+]
