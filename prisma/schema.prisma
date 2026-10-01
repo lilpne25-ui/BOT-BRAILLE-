@@ -84,6 +84,13 @@ enum ConversationRole {
   USER
 }
 
+enum InboundEventStatus {
+  PROCESSING
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
 enum QuoteStatus {
   DRAFT
   SENT
@@ -339,6 +346,29 @@ model ConversationMessage {
   createdAt             DateTime            @default(now())
   conversation          Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   conversationSession   ConversationSession @relation(fields: [conversationSessionId], references: [id], onDelete: Cascade)
+}
+
+// Idempotency ledger for inbound WhatsApp events. Stores metadata only:
+// no message text, payload, audio, phone or name. dedupeKey is NULL when the
+// provider did not supply a usable identity (event recorded, not deduplicated).
+// conversationId/sessionId are soft references (no FK) on purpose.
+model InboundEvent {
+  id                String             @id @default(cuid())
+  dedupeKey         String?            @unique
+  provider          String
+  channelId         String?
+  providerMessageId String?
+  messageType       String
+  status            InboundEventStatus @default(PROCESSING)
+  outcome           String?
+  errorCode         String?
+  transcribed       Boolean            @default(false)
+  conversationId    String?
+  sessionId         String?
+  receivedAt        DateTime           @default(now())
+  completedAt       DateTime?
+
+  @@index([status, receivedAt])
 }
 
 model ActivityLog {
