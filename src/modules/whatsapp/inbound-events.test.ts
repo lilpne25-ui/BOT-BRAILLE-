@@ -5,6 +5,8 @@ import {
   claimInboundEvent,
   completeInboundEvent,
   hashProviderMessageId,
+  inboundErrorCode,
+  isInboundIdempotencyEnabled,
   resolveInboundEventIdentity
 } from "@/modules/whatsapp/inbound-events";
 
@@ -237,6 +239,38 @@ describe("claimInboundEvent", () => {
     inboundEvent.create.mockRejectedValue(new Error("connection refused"));
 
     await expect(claimInboundEvent(metaEvent, store)).rejects.toThrow("connection refused");
+  });
+});
+
+describe("isInboundIdempotencyEnabled", () => {
+  it("por defecto está apagado y solo 1/true/on lo activan", () => {
+    const original = process.env.WHATSAPP_INBOUND_IDEMPOTENCY;
+    const check = (value: string | undefined) => {
+      if (value === undefined) delete process.env.WHATSAPP_INBOUND_IDEMPOTENCY;
+      else process.env.WHATSAPP_INBOUND_IDEMPOTENCY = value;
+      return isInboundIdempotencyEnabled();
+    };
+
+    try {
+      expect(check(undefined)).toBe(false);
+      expect(check("")).toBe(false);
+      expect(check("0")).toBe(false);
+      expect(check("off")).toBe(false);
+      expect(check("yes")).toBe(false);
+      expect(check("1")).toBe(true);
+      expect(check(" TRUE ")).toBe(true);
+      expect(check("on")).toBe(true);
+    } finally {
+      check(original);
+    }
+  });
+});
+
+describe("inboundErrorCode", () => {
+  it("usa solo la clase o el código Prisma, nunca el mensaje", () => {
+    expect(inboundErrorCode(uniqueViolation())).toBe("prisma_P2002");
+    expect(inboundErrorCode(new TypeError("cliente 5215500000001"))).toBe("error_TypeError");
+    expect(inboundErrorCode("texto suelto")).toBe("error_unknown");
   });
 });
 

@@ -7,28 +7,19 @@ import {
   completeInboundEvent,
   hashProviderMessageId
 } from "@/modules/whatsapp/inbound-events";
+import {
+  TEST_DATABASE_URL,
+  assertDisposableDatabase
+} from "@/modules/whatsapp/test-support/disposable-database";
 
 // Proves the PostgreSQL guarantees that a mock cannot. Skipped unless
 // INBOUND_EVENTS_TEST_DATABASE_URL is set. It DROPS and recreates the InboundEvent
 // table, so it refuses any URL that is not a local database whose name ends in "_test".
 
-const TEST_DATABASE_URL = process.env.INBOUND_EVENTS_TEST_DATABASE_URL?.trim() ?? "";
 const MIGRATION_FILE = path.resolve(
   __dirname,
   "../../../prisma/migrations/20260930120000_inbound_events/migration.sql"
 );
-
-function assertDisposableDatabase(url: string) {
-  const parsed = new URL(url);
-  const host = parsed.hostname.replace(/^\[|\]$/g, "");
-  const database = parsed.pathname.replace(/^\//, "");
-
-  if (!["localhost", "127.0.0.1", "::1"].includes(host) || !database.endsWith("_test")) {
-    throw new Error(
-      "INBOUND_EVENTS_TEST_DATABASE_URL must point to a local database whose name ends in _test."
-    );
-  }
-}
 
 function migrationStatements() {
   return fs

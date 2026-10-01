@@ -15,6 +15,8 @@ function fromMetaPayload(payload: any): NormalizedInboundMessage[] {
       const contacts = Array.isArray(value?.contacts) ? value.contacts : [];
       const messages = Array.isArray(value?.messages) ? value.messages : [];
       const contactName = contacts[0]?.profile?.name as string | undefined;
+      const phoneNumberId = value?.metadata?.phone_number_id;
+      const channelId = phoneNumberId ? String(phoneNumberId) : undefined;
 
       for (const message of messages) {
         const messageType = String(message?.type ?? "unknown");
@@ -33,7 +35,10 @@ function fromMetaPayload(payload: any): NormalizedInboundMessage[] {
           messageText: text,
           messageType,
           timestamp: new Date(Number(message?.timestamp ?? Date.now() / 1000) * 1000).toISOString(),
-          providerMessageId: String(message?.id ?? crypto.randomUUID()),
+          // No invented fallback: a missing id must stay missing so it is never mistaken
+          // for a real provider identity.
+          providerMessageId: message?.id ? String(message.id) : undefined,
+          channelId,
           rawPayload: message
         });
       }
@@ -65,8 +70,12 @@ function fromTwilioForm(form: URLSearchParams): NormalizedInboundMessage[] {
   ];
 }
 
+export function detectWebhookProvider(contentType: string | null): "META" | "TWILIO" {
+  return contentType?.includes("application/x-www-form-urlencoded") ? "TWILIO" : "META";
+}
+
 export function normalizeWebhookPayload(payload: unknown, contentType: string | null): NormalizedInboundMessage[] {
-  if (contentType?.includes("application/x-www-form-urlencoded")) {
+  if (detectWebhookProvider(contentType) === "TWILIO") {
     const form = payload instanceof URLSearchParams ? payload : new URLSearchParams();
     return fromTwilioForm(form);
   }

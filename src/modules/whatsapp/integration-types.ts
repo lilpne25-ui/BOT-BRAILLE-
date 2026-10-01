@@ -6,7 +6,10 @@ export type NormalizedInboundMessage = {
   messageText: string;
   messageType: string;
   timestamp: string;
-  providerMessageId: string;
+  // Undefined when the provider sent no id (Meta). Never replace it with a random value.
+  providerMessageId?: string;
+  // Provider account that received the message (Meta: metadata.phone_number_id).
+  channelId?: string;
   rawPayload: unknown;
   transcribedFromAudio?: boolean;
 };

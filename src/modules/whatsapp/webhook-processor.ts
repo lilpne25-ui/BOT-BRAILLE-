@@ -14,6 +14,7 @@ import {
   mapConversationStatusToDb
 } from "@/modules/db/mappers";
 import { upsertHumanReviewLead } from "@/modules/leads/upsert-human-review-lead";
+import { completeInboundEvent } from "@/modules/whatsapp/inbound-events";
 import { NormalizedInboundMessage } from "@/modules/whatsapp/integration-types";
 import { sendWhatsAppReply } from "@/modules/whatsapp/provider";
 
@@ -297,8 +298,13 @@ async function createHumanReviewOutcomeWithRetry(
 }
 
 export async function processInboundWhatsAppMessage(
-  message: NormalizedInboundMessage
+  message: NormalizedInboundMessage,
+  options?: {
+    // Set only when the caller already claimed the event (idempotency enabled).
+    inboundEventId?: string;
+  }
 ) {
+  const inboundEventId = options?.inboundEventId;
   const storagePhone = normalizePhoneForStorage(
     message.phone
   );
@@ -308,6 +314,13 @@ export async function processInboundWhatsAppMessage(
   let started = await findActiveSession(storagePhone);
 
   if (!started && !strictStart) {
+    if (inboundEventId) {
+      await completeInboundEvent(inboundEventId, {
+        status: "IGNORED",
+        outcome: "non_quote_message"
+      });
+    }
+
     return {
       ignored: true,
       reason: "non_quote_message"
@@ -454,7 +467,9 @@ export async function processInboundWhatsAppMessage(
         conversationSessionId: dbSession.id,
         role: mapConversationRoleToDb("user"),
         text: message.messageText,
-        stepId: `provider:${message.providerMessageId}`
+        stepId: message.providerMessageId
+          ? `provider:${message.providerMessageId}`
+          : null
       }
     });
 
@@ -488,6 +503,26 @@ export async function processInboundWhatsAppMessage(
           }
         }
       });
+    }
+
+    // Same transaction as the conversation writes: either both commit or neither does.
+    // NOTE: the reply was already sent above (known send-before-persist gap, Phase 2).
+    if (inboundEventId) {
+      await completeInboundEvent(
+        inboundEventId,
+        {
+          status: "PROCESSED",
+          outcome: sendError
+            ? "reply_send_failed"
+            : assistantReply.trim()
+              ? "replied"
+              : "no_reply",
+          transcribed: Boolean(message.transcribedFromAudio),
+          conversationId: started.conversationId,
+          sessionId: dbSession.id
+        },
+        tx
+      );
     }
   });
 

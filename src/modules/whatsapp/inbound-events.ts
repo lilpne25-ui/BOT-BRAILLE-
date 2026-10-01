@@ -73,6 +73,34 @@ export type InboundEventCompletion = {
 
 type InboundEventStore = Pick<PrismaClient, "inboundEvent">;
 
+/**
+ * Rollout switch for inbound idempotency. Default OFF: when WHATSAPP_INBOUND_IDEMPOTENCY
+ * is unset or has any other value, the legacy flow runs unchanged. Only "1", "true" or
+ * "on" (case-insensitive) enable it. Read on every call, so it can be flipped without
+ * code changes. Currently honored by the Meta webhook only.
+ */
+export function isInboundIdempotencyEnabled() {
+  const value = process.env.WHATSAPP_INBOUND_IDEMPOTENCY?.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "on";
+}
+
+/**
+ * Short, safe error code for InboundEvent.errorCode. Built only from the error class
+ * name or Prisma error code, never from error.message (which may carry PII or secrets).
+ */
+export function inboundErrorCode(error: unknown) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return `prisma_${error.code}`;
+  }
+
+  if (error instanceof Error) {
+    const name = error.name.replace(/[^A-Za-z0-9_]/g, "").slice(0, 60);
+    return name ? `error_${name}` : "error_unknown";
+  }
+
+  return "error_unknown";
+}
+
 const DEDUPE_KEY_VERSION = "inbound-event:v1";
 const PROVIDER_MESSAGE_ID_HASH_VERSION = "inbound-event:provider-message-id:v1";
 
